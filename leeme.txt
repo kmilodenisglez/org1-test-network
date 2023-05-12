@@ -1,0 +1,113 @@
+sudo bash hst-install.sh --port '8083' --lang 'en' --hostname 'server.localhost.com' --email 'kmilo.denis.glez@gmail.com' --password 'kmilo' --apache yes --phpfpm yes --multiphp yes --vsftpd yes --proftpd no --named no --mysql yes --mysql-classic no --postgresql no --exim no --dovecot no --sieve no --clamav no --spamassassin no --iptables no --fail2ban no --quota no --api yes --interactive yes --force no
+
+
+
+
+./network.sh up  -i 2.4.3
+./network.sh up createChannel -c mychannel  -i 2.4.3
+
+./network.sh up createChannel  -i 2.4.3 -s couchdb -i 2.0.0
+
+
+
+
+/usr/bin/vmhgfs-fuse .host:/ /home/user1/shares -o subtype=vmhgfs-fuse,allow_other
+
+
+
+
+
+
+
+
+------------- PASOS
+
+Agrega la siguiente linea al `/etc/hosts`:
+
+```
+127.0.0.1 peer1.org1.example.com peer2.org1.example.com orderer.example.com
+```
+
+
+Agrega las siguientes lineas al `~/.profile`, para esta configuracion tenemos en cuenta que el fabric-samples esta ubicado en el /home del usuario:
+
+```
+FF=~/fabric-samples
+TNF=~/fabric-samples/test-network
+
+
+export CHANNEL_NAME=mychannel
+export ORDERER_ADDRESS=orderer.example.com:7050
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_LOCALMSPID="Org1MSP"
+export ORDERER_CA=${TNF}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+export CORE_PEER_TLS_ROOTCERT_FILE=${TNF}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=${TNF}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+export CORE_PEER_ADDRESS=localhost:7051
+
+export PATH=${FF}/bin:$PATH
+export FABRIC_CFG_PATH=${FF}/config/
+```
+
+Carga las variables de entornos:
+```bash
+source ~/.profile
+```
+
+
+
+curl -sSLO https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh && chmod +x install-fabric.sh
+
+./install-fabric.sh --fabric-version 2.5.1 docker samples binary
+
+cd ./fabric-samples/test-network
+
+
+
+./network.sh up createChannel -ca -s couchdb
+./network.sh up createChannel -s couchdb
+
+
+./network.sh deployCCAAS -ccn traceability -ccp cc-traceability-go
+
+
+# interactuando
+
+peer chaincode invoke -c '{"function":"org.tecnomatica.common:InitLedger","Args":[]}' -o $ORDERER_ADDRESS -C $CHANNEL_NAME -n traceability --tls --cafile $ORDERER_CA 
+
+peer chaincode query -c '{"function":"org.tecnomatica.common:QueryAssetsWithPagination","Args":["{\"queryString\":{\"selector\":{\"docType\":\"did.access\"}},\"pageSize\":3,\"bookmark\":\"\"}"]}' -o $ORDERER_ADDRESS -C $CHANNEL_NAME -n traceability --tls --cafile $ORDERER_CA
+
+
+
+
+You can then start Logspout by running the following command:
+
+./monitordocker.sh fabric_test
+
+
+# install contracts
+
+First, create a `code.tar.gz` archive containing the `connection.json` file:
+```
+tar cfz code.tar.gz connection.json
+```
+Then, create the chaincode package, including the `code.tar.gz` file and the supplied `metadata.json` file:
+```
+tar cfz asset-transfer-basic-external.tgz metadata.json code.tar.gz
+```
+
+
+./network.sh deployCCAAS -ccn basic -ccp ../asset-transfer-basic/chaincode-external/
+
+
+
+
+
+peer lifecycle chaincode approveformyorg --version 1 --sequence 1 -o $ORDERER_ADDRESS --channelID $CHANNEL_NAME --name $CC_NAME --package-id $CHAINCODE_ID --tls --cafile $ORDERER_CA
+
+peer lifecycle chaincode commit --version 1 --sequence 1 -o $ORDERER_ADDRESS --channelID $CHANNEL_NAME --name $CC_NAME --tls --cafile $ORDERER_CA
+
+
+
+Other docs:
+https://hyperledger-fabric.readthedocs.io/en/latest/deploy_chaincode.html
