@@ -1,0 +1,33 @@
+version: '3.4'
+services:
+  ipfs0:
+    container_name: ipfs0
+    image: ipfs/kubo:release
+    restart: unless-stopped
+    volumes:
+      # - ipfs0_path:/data/ipfs
+      # - ipfs0_fuse:/ipfs
+      # - ipns0_fuse:/ipns
+      - ./volume/ipfs0:/data/ipfs
+      - ./volume/ipfs0_fuse:/ipfs
+      - ./volume/ipns0_fuse:/ipns
+      - ./volume/scripts:/container-init.d
+    environment:
+      - IPFS_PATH=/data/ipfs
+    ports:
+      # Swarm listens on all interfaces, so is remotely reachable.
+      - 4001:4001/tcp
+      - 4001:4001/udp
+
+      # The following ports only listen on the loopback interface, so are not remotely reachable by default.
+      # If you want to override these or add more ports, see https://docs.docker.com/compose/extends/ .
+
+      # API port, which includes admin operations, so you probably don't want this remotely accessible.
+      - 127.0.0.1:5002:5002
+
+      # HTTP Gateway
+      - 127.0.0.1:8080:8080
+# volumes:
+#   ipfs0_path:
+#   ipfs0_fuse:
+#   ipns0_fuse:
